@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Database Mineralogico</title>
+<style>
+:root {
+  --bg:#f5f7fa; --card:#fff; --text:#17212b; --muted:#657381;
+  --accent:#245b7a; --accent2:#dcecf5; --border:#dce3e8;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#173d54,#2d6f8e);color:#fff;padding:42px 20px 34px}
+header .wrap, main{max-width:1050px;margin:auto}
+h1{margin:0 0 8px;font-size:clamp(30px,5vw,46px)}
+.subtitle{margin:0;opacity:.9;font-size:17px}
+.searchbox{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap}
+input{flex:1;min-width:240px;padding:15px 17px;border:0;border-radius:12px;font-size:16px;outline:none}
+select{padding:15px 17px;border:0;border-radius:12px;font-size:16px;background:white;min-width:230px}
+main{padding:28px 20px 60px}
+.status{color:var(--muted);margin:0 0 18px}
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.result{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:18px;cursor:pointer;transition:.15s}
+.result:hover{transform:translateY(-2px);box-shadow:0 7px 20px rgba(0,0,0,.07);border-color:#b9cbd6}
+.result h3{margin:0 0 6px;color:var(--accent);font-size:19px}
+.result .it{font-weight:600;margin-bottom:9px}
+.badge{display:inline-block;background:var(--accent2);color:var(--accent);padding:5px 8px;border-radius:999px;font-size:12px}
+.modal{display:none;position:fixed;inset:0;background:rgba(10,20,28,.55);padding:20px;overflow:auto;z-index:5}
+.modal.open{display:flex;align-items:flex-start;justify-content:center}
+.panel{background:white;max-width:900px;width:100%;margin:30px auto;border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.panel-head{padding:24px;background:#edf5f9;border-bottom:1px solid var(--border);position:relative}
+.panel-head h2{margin:0 35px 4px 0;color:var(--accent)}
+.close{position:absolute;right:18px;top:14px;border:0;background:transparent;font-size:30px;cursor:pointer;color:#53636e}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border-top:1px solid var(--border)}
+.field{padding:15px 18px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.field.full{grid-column:1/-1}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:5px}
+.value{line-height:1.5}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.field{border-right:0}}
+.empty{padding:35px;text-align:center;color:var(--muted);background:white;border-radius:15px;border:1px solid var(--border)}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:0 20px 30px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Database Mineralogico</h1>
+    <p class="subtitle">Cerca un minerale e consulta rapidamente le sue proprietà mineralogiche.</p>
+    <div class="searchbox">
+      <input id="search" type="search" placeholder="Cerca per nome italiano, inglese, colore, categoria..." autofocus>
+      <select id="category"><option value="">Tutte le categorie</option></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="status" id="status"></p>
+  <div class="results" id="results"></div>
+</main>
+<footer>Database mineralogico — consultazione didattica. Alcuni nomi indicano varietà, rocce o materiali commerciali e non specie mineralogiche autonome.</footer>
+
+<div class="modal" id="modal">
+  <div class="panel" role="dialog" aria-modal="true">
+    <div class="panel-head">
+      <button class="close" id="close" aria-label="Chiudi">×</button>
+      <h2 id="modalTitle"></h2>
+      <div id="modalSubtitle"></div>
+    </div>
+    <div class="grid" id="details"></div>
+  </div>
+</div>
+
+<script>
+const minerals = [{"English name": "Rutilated green quartz", "Italian name": "Quarzo verde rutilato", "Category": "Varietà/aggregato di quarzo con inclusioni", "Formula": "SiO₂ (quarzo; inclusioni di rutilo TiO₂ e/o altri minerali)", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65 circa", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Green to yellow-green, often with golden/reddish/black inclusions", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Quarzo macrocristallino contenente inclusioni aciculari, comunemente attribuite al rutilo; il colore verde può dipendere anche da inclusioni di clorite o altri minerali. Il termine è spesso usato in ambito commerciale e lapidario.", "Diagnostic features": "Durezza elevata, lucentezza vitrea, frattura concoide e inclusioni aciculari visibili in trasparenza.", "Notes": "Non è una specie mineralogica distinta: la composizione e il colore delle inclusioni possono variare."}, {"English name": "Moss agate", "Italian name": "Agata muschiata", "Category": "Varietà di calcedonio/quarzo microcristallino", "Formula": "SiO₂", "Crystal system": "Trigonal (quarzo; struttura microcristallina)", "Mohs hardness": "6.5–7", "Specific gravity (g/cm³)": "2.58–2.64", "Luster": "Waxy to vitreous", "Cleavage": "None", "Fracture": "Conchoidal", "Color": "Colorless/white to translucent with green, brown or black dendritic inclusions", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Varietà di calcedonio caratterizzata da inclusioni dendritiche o filamentose, spesso verdi per la presenza di minerali come clorite o anfiboli.", "Diagnostic features": "Aspetto 'muschiato' dovuto alle inclusioni interne e assenza di vera sfaldatura.", "Notes": "L'agata muschiata non presenta necessariamente bande concentriche tipiche delle agate classiche."}, {"English name": "White agate", "Italian name": "Agata bianca", "Category": "Varietà di calcedonio/quarzo microcristallino", "Formula": "SiO₂", "Crystal system": "Trigonal (quarzo; struttura microcristallina)", "Mohs hardness": "6.5–7", "Specific gravity (g/cm³)": "2.58–2.64", "Luster": "Waxy to vitreous", "Cleavage": "None", "Fracture": "Conchoidal", "Color": "White, milky, greyish white", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Calcedonio di colore bianco o bianco latte, talvolta con deboli bande. Il colore è legato alla microstruttura e a inclusioni/fluidi microscopici.", "Diagnostic features": "Durezza 6.5–7, frattura concoide, lucentezza cerosa-vetrosa e aspetto generalmente compatto.", "Notes": "Nome varietale/commerciale, non specie mineralogica autonoma."}, {"English name": "Rose quartz", "Italian name": "Quarzo rosa", "Category": "Varietà di quarzo", "Formula": "SiO₂", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Pale pink to rose", "Streak": "White", "Transparency": "Transparent to translucent; commonly translucent", "Description": "Varietà di quarzo con colore rosa dovuto a difetti strutturali e/o inclusioni microscopiche. Il quarzo rosa massivo è molto comune come materiale ornamentale.", "Diagnostic features": "Colore rosa, durezza 7, frattura concoide e assenza di sfaldatura.", "Notes": "Il quarzo rosa cristallino ben formato è raro rispetto al materiale massivo."}, {"English name": "Garnet", "Italian name": "Granato", "Category": "Gruppo di minerali (nesosilicati)", "Formula": "X₃Y₂(SiO₄)₃ (formula generale)", "Crystal system": "Cubic/isometric", "Mohs hardness": "6.5–7.5", "Specific gravity (g/cm³)": "circa 3.5–4.3, variabile", "Luster": "Vitreous to resinous", "Cleavage": "None", "Fracture": "Conchoidal to uneven", "Color": "Red, orange, yellow, green, brown, black, pink and others", "Streak": "White", "Transparency": "Transparent to opaque", "Description": "Il granato è un gruppo di nesosilicati, non una singola specie. Comprende specie come piropo, almandino, spessartina, grossularia, andradite e uvarovite.", "Diagnostic features": "Durezza elevata, assenza di sfaldatura, cristalli spesso equidimensionali e sistema cubico.", "Notes": "Per una scheda più precisa occorre identificare la specie di granato."}, {"English name": "Sodalite", "Italian name": "Sodalite", "Category": "Feldspatoide", "Formula": "Na₄(Si₃Al₃)O₁₂Cl", "Crystal system": "Cubic/isometric", "Mohs hardness": "5.5–6", "Specific gravity (g/cm³)": "2.27–2.33", "Luster": "Vitreous to greasy", "Cleavage": "Poor/indistinct", "Fracture": "Sub-conchoidal", "Color": "Blue to deep blue, white, grey, yellowish and others", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Feldspatoide ricco in sodio e cloro, spesso di colore blu intenso con venature o inclusioni bianche. È comune in rocce alcaline povere in silice.", "Diagnostic features": "Colore blu, durezza 5.5–6, densità relativamente bassa e possibile fluorescenza in alcune varietà.", "Notes": "La composizione riportata è quella ideale; possono esserci sostituzioni chimiche."}, {"English name": "Obsidian", "Italian name": "Ossidiana", "Category": "Vetro vulcanico", "Formula": "Composizione variabile, generalmente ricca in SiO₂", "Crystal system": "Non applicabile (amorfa)", "Mohs hardness": "5–5.5 circa", "Specific gravity (g/cm³)": "2.3–2.6 circa", "Luster": "Vitreous", "Cleavage": "None", "Fracture": "Conchoidal", "Color": "Black, brown, grey, mahogany, green and others", "Streak": "White to pale", "Transparency": "Opaque to translucent", "Description": "Vetro vulcanico naturale formato dal rapido raffreddamento di magmi viscosi, che impedisce la crescita di una struttura cristallina ordinata.", "Diagnostic features": "Frattura concoide molto netta, lucentezza vitrea e assenza di struttura cristallina.", "Notes": "Non è un minerale in senso stretto perché è amorfa."}, {"English name": "Howlite", "Italian name": "Howlite (howlite)", "Category": "Borato", "Formula": "Ca₂B₅SiO₉(OH)₅", "Crystal system": "Monoclinic", "Mohs hardness": "circa 3.5–6.5 (dipende dal materiale/forma)", "Specific gravity (g/cm³)": "2.53–2.59", "Luster": "Vitreous to sub-vitreous", "Cleavage": "Perfect", "Fracture": "Uneven", "Color": "White to grey, commonly with dark grey/black veining", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Borato di calcio idrato, tipicamente bianco o grigio chiaro con venature scure. In commercio può essere tinta artificialmente, soprattutto per imitare il turchese.", "Diagnostic features": "Colore bianco, venature scure, densità moderata e durezza variabile a seconda della tessitura.", "Notes": "La durezza riportata in letteratura varia; per campioni massivi è spesso più bassa di quella di cristalli singoli."}, {"English name": "Citrine", "Italian name": "Citrino", "Category": "Varietà di quarzo", "Formula": "SiO₂", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Pale yellow to orange-brown", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Varietà gialla di quarzo, con colorazione legata principalmente a centri di colore e difetti nella struttura del cristallo. Gran parte del citrino commerciale deriva da trattamento termico di ametista o quarzo affumicato.", "Diagnostic features": "Durezza 7, lucentezza vitrea, frattura concoide e colore giallo-arancio.", "Notes": "Il citrino naturale è meno comune del materiale trattato."}, {"English name": "Amazonite", "Italian name": "Amazzonite", "Category": "Varietà di microclino (feldspato potassico)", "Formula": "KAlSi₃O₈", "Crystal system": "Triclinic", "Mohs hardness": "6–6.5", "Specific gravity (g/cm³)": "2.54–2.58", "Luster": "Vitreous to pearly", "Cleavage": "Perfect in two directions", "Fracture": "Uneven to conchoidal", "Color": "Blue-green to green", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Varietà verde-azzurra del microclino, feldspato potassico. Il colore è associato a sostituzioni e difetti strutturali, spesso in presenza di piombo e acqua in tracce.", "Diagnostic features": "Colore verde-azzurro, sfaldatura feldspatica perfetta e durezza circa 6–6.5.", "Notes": "Il nome amazzonite indica una varietà, non una specie distinta."}, {"English name": "Smoky quartz", "Italian name": "Quarzo fumé / quarzo affumicato", "Category": "Varietà di quarzo", "Formula": "SiO₂", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Grey, brown, smoky brown to nearly black", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Varietà di quarzo con tonalità brune o grigio-fumose dovute soprattutto a centri di colore legati a irraggiamento e impurità, in particolare alluminio.", "Diagnostic features": "Durezza 7, colore fumé, frattura concoide e assenza di sfaldatura.", "Notes": "Alcuni campioni commerciali possono essere irradiati artificialmente."}, {"English name": "Unakite", "Italian name": "Unakite", "Category": "Roccia metamorfica/alterata", "Formula": "Miscela: feldspato, epidoto, quarzo (variabile)", "Crystal system": "Non applicabile alla roccia nel suo insieme", "Mohs hardness": "Variabile", "Specific gravity (g/cm³)": "Variabile", "Luster": "Variabile", "Cleavage": "Dipende dai minerali costituenti", "Fracture": "Irregolare", "Color": "Green and pink/red", "Streak": "Non diagnostica", "Transparency": "Opaque", "Description": "Roccia ornamentale composta tipicamente da feldspato potassico rosa, epidoto verde e quarzo. Si forma per alterazione/metamorfismo di protoliti granitoidi.", "Diagnostic features": "Mosaico caratteristico rosa-rosso e verde, dovuto alla combinazione di feldspato ed epidoto.", "Notes": "Non è una specie minerale."}, {"English name": "Red jasper", "Italian name": "Diaspro rosso", "Category": "Varietà di quarzo microcristallino/calcedonio", "Formula": "SiO₂ con impurità, soprattutto ossidi di Fe", "Crystal system": "Trigonal (quarzo; microcristallino)", "Mohs hardness": "6.5–7", "Specific gravity (g/cm³)": "2.5–2.9 circa", "Luster": "Dull to vitreous", "Cleavage": "None", "Fracture": "Conchoidal to uneven", "Color": "Red, brick-red, brownish red", "Streak": "White to reddish", "Transparency": "Opaque", "Description": "Varietà opaca e ricca di quarzo microcristallino, con colore rosso dovuto principalmente a ossidi e idrossidi di ferro.", "Diagnostic features": "Colore rosso uniforme o maculato, opacità, durezza 6.5–7 e frattura concoide/irregolare.", "Notes": "Il diaspro è una roccia silicea microcristallina più che una singola specie minerale."}, {"English name": "Strawberry quartz", "Italian name": "Quarzo fragola", "Category": "Varietà commerciale di quarzo", "Formula": "SiO₂", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Pink to reddish pink", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Nome commerciale per quarzo rosato/rosso, spesso con inclusioni fini di ematite, goethite o altri minerali. La definizione non è rigorosamente standardizzata.", "Diagnostic features": "Colore rosa-rosso con aspetto granulare o inclusioni rosse, associato alle proprietà tipiche del quarzo.", "Notes": "Non è una specie mineralogica formalmente distinta."}, {"English name": "Labradorite", "Italian name": "Labradorite", "Category": "Feldspato plagioclasio", "Formula": "(Ca,Na)(Al,Si)₄O₈", "Crystal system": "Triclinic", "Mohs hardness": "6–6.5", "Specific gravity (g/cm³)": "2.68–2.72 circa", "Luster": "Sub-vitreous", "Cleavage": "Perfect", "Fracture": "Uneven to conchoidal", "Color": "Grey, grey-white, greenish, colourless; iridescent blue/green/gold flashes", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Feldspato plagioclasio intermedio della serie albite-anortite. È famoso per la labradorescenza, un gioco di colori dovuto alla struttura lamellare interna prodotta da processi di essoluzione.", "Diagnostic features": "Sfaldatura perfetta dei feldspati e caratteristica labradorescenza blu, verde, gialla o multicolore.", "Notes": "La labradorescenza dipende dall'orientazione delle lamelle e dall'angolo di osservazione."}, {"English name": "Blue apatite", "Italian name": "Apatite blu", "Category": "Apatite (gruppo di fosfati)", "Formula": "Ca₅(PO₄)₃(F,Cl,OH)", "Crystal system": "Hexagonal", "Mohs hardness": "5", "Specific gravity (g/cm³)": "3.16–3.22 circa", "Luster": "Vitreous to sub-vitreous", "Cleavage": "Poor", "Fracture": "Conchoidal to uneven", "Color": "Blue, blue-green, green, yellow and others", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Apatite di colore blu o blu-verde, appartenente a un gruppo di fosfati con F, Cl e OH variabili. È comune in rocce ignee e metamorfiche come accessorio.", "Diagnostic features": "Durezza 5, densità relativamente alta, cristalli spesso prismatici esagonali e colore blu in alcune varietà.", "Notes": "Il termine 'apatite' comprende più composizioni della serie fluorapatite–clorapatite–idrossilapatite."}, {"English name": "Lapis lazuli", "Italian name": "Lapislazzuli", "Category": "Roccia/metamorfite composta", "Formula": "Variabile; lazurite principale, con calcite, pirite e altri minerali", "Crystal system": "Variabile; lazurite cubica", "Mohs hardness": "5–5.5", "Specific gravity (g/cm³)": "2.7–2.9 circa", "Luster": "Vitreous to dull", "Cleavage": "Poor/none in massive rock", "Fracture": "Uneven", "Color": "Deep blue to violet-blue, often with white calcite and brassy pyrite", "Streak": "Pale blue", "Transparency": "Opaque", "Description": "Roccia metamorfica ornamentale dominata dalla lazurite, spesso associata a calcite, pirite e altri minerali del gruppo della sodalite. Il colore blu intenso è dovuto principalmente alla lazurite.", "Diagnostic features": "Blu intenso, possibili venature bianche di calcite e inclusioni dorate di pirite.", "Notes": "Non è una singola specie minerale."}, {"English name": "Snowflake obsidian", "Italian name": "Ossidiana fiocco di neve", "Category": "Vetro vulcanico con sferuliti", "Formula": "Composizione variabile, generalmente ricca in SiO₂", "Crystal system": "Amorfa; sferuliti cristalline", "Mohs hardness": "5–5.5 circa", "Specific gravity (g/cm³)": "2.3–2.6 circa", "Luster": "Vitreous", "Cleavage": "None", "Fracture": "Conchoidal", "Color": "Black with white/grey 'snowflake' spherulites", "Streak": "White to pale", "Transparency": "Opaque to translucent", "Description": "Ossidiana contenente sferuliti chiare, spesso formate da cristobalite e/o feldspato, che producono il caratteristico disegno a fiocco di neve.", "Diagnostic features": "Matrice nera vitrea con sferuliti bianche o grigie distribuite al suo interno.", "Notes": "È una varietà di ossidiana, quindi non un minerale cristallino."}, {"English name": "Green aventurine", "Italian name": "Avventurina verde", "Category": "Varietà di quarzo/quarzite ornamentale", "Formula": "SiO₂ con inclusioni cromofore", "Crystal system": "Trigonal (quarzo)", "Mohs hardness": "6.5–7", "Specific gravity (g/cm³)": "2.6–2.7 circa", "Luster": "Vitreous; aventurescence", "Cleavage": "None", "Fracture": "Conchoidal to uneven", "Color": "Green", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Materiale siliceo con inclusioni lamellari, spesso fuchsite, che producono l'avventurescenza: un luccichio dovuto alla riflessione della luce sulle inclusioni.", "Diagnostic features": "Colore verde e tipico scintillio interno (avventurescenza), oltre a durezza elevata.", "Notes": "Il termine può essere usato commercialmente per materiali con composizione e quantità di inclusioni variabili."}, {"English name": "Tiger's eye", "Italian name": "Occhio di tigre", "Category": "Varietà fibrosa di quarzo (pseudomorfo/alterazione di materiale anfibolico)", "Formula": "Prevalentemente SiO₂, con fibre e ossidi di Fe", "Crystal system": "Trigonal (quarzo; tessitura fibrosa)", "Mohs hardness": "6.5–7", "Specific gravity (g/cm³)": "2.64–2.71 circa", "Luster": "Silky", "Cleavage": "None", "Fracture": "Uneven to splintery", "Color": "Golden brown to yellow-brown", "Streak": "White to pale", "Transparency": "Opaque to translucent", "Description": "Varietà di quarzo fibroso con effetto chatoyance, cioè una banda luminosa che sembra scorrere sulla superficie quando il campione viene illuminato e mosso.", "Diagnostic features": "Chatoyance molto evidente, lucentezza sericea e struttura fibrosa.", "Notes": "Il colore dorato è legato soprattutto all'ossidazione del ferro; il materiale blu è detto occhio di falco."}, {"English name": "Amethyst", "Italian name": "Ametista", "Category": "Varietà di quarzo", "Formula": "SiO₂", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Purple to violet", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Varietà viola del quarzo. Il colore è legato a difetti strutturali e impurità, in particolare ferro, combinati con irraggiamento naturale.", "Diagnostic features": "Colore viola, durezza 7, frattura concoide e assenza di sfaldatura.", "Notes": "Il colore può essere modificato dal trattamento termico."}, {"English name": "Fluorite", "Italian name": "Fluorite", "Category": "Alogenuro", "Formula": "CaF₂", "Crystal system": "Cubic/isometric", "Mohs hardness": "4", "Specific gravity (g/cm³)": "3.18", "Luster": "Vitreous", "Cleavage": "Perfect in four directions", "Fracture": "Uneven to subconchoidal", "Color": "Purple, green, yellow, blue, colourless and many others", "Streak": "White", "Transparency": "Transparent to translucent", "Description": "Fluoruro di calcio, spesso presente in cristalli cubici o ottaedrici. È caratterizzata da sfaldatura perfetta in quattro direzioni e può mostrare fluorescenza.", "Diagnostic features": "Durezza 4, sfaldatura perfetta in quattro direzioni e frequenti cristalli cubici.", "Notes": "La fluorescenza dipende da elementi in traccia e difetti del reticolo."}, {"English name": "Clear quartz", "Italian name": "Quarzo ialino / quarzo cristallo di rocca", "Category": "Quarzo", "Formula": "SiO₂", "Crystal system": "Trigonal", "Mohs hardness": "7", "Specific gravity (g/cm³)": "2.65", "Luster": "Vitreous", "Cleavage": "None / very poor", "Fracture": "Conchoidal", "Color": "Colourless", "Streak": "White", "Transparency": "Transparent", "Description": "Quarzo incolore e trasparente, spesso in cristalli ben formati con prisma esagonale e terminazioni piramidali. È una delle forme più riconoscibili del quarzo.", "Diagnostic features": "Trasparenza elevata, cristalli esagonali, durezza 7 e frattura concoide.", "Notes": "Il termine 'clear quartz' è prevalentemente descrittivo/commerciale; 'cristallo di rocca' è il termine tradizionale."}, {"English name": "Red agate", "Italian name": "Agata rossa", "Category": "Varietà di calcedonio/quarzo microcristallino", "Formula": "SiO₂ con impurità, soprattutto ossidi di Fe", "Crystal system": "Trigonal (quarzo; struttura microcristallina)", "Mohs hardness": "6.5–7", "Specific gravity (g/cm³)": "2.58–2.64", "Luster": "Waxy to vitreous", "Cleavage": "None", "Fracture": "Conchoidal", "Color": "Red, orange-red, brownish red; often banded", "Streak": "White", "Transparency": "Translucent to opaque", "Description": "Agata con tonalità rosse dovute principalmente a ossidi e idrossidi di ferro. Può mostrare bande concentriche o parallele tipiche della deposizione di calcedonio in cavità.", "Diagnostic features": "Bande di calcedonio, durezza 6.5–7, frattura concoide e colorazione rossa.", "Notes": "Il nome indica una varietà di agata, non una specie mineralogica distinta."}];
+
+const labels = {
+  "Italian name":"Nome italiano","English name":"Nome inglese","Category":"Categoria",
+  "Formula":"Formula chimica","Crystal system":"Sistema cristallino","Mohs hardness":"Durezza Mohs",
+  "Specific gravity (g/cm³)":"Densità","Luster":"Lucentezza","Cleavage":"Sfaldatura",
+  "Fracture":"Frattura","Color":"Colore","Streak":"Striscio","Transparency":"Trasparenza",
+  "Description":"Descrizione","Diagnostic features":"Caratteri diagnostici","Notes":"Note"
+};
+
+const search = document.getElementById('search');
+const category = document.getElementById('category');
+const results = document.getElementById('results');
+const status = document.getElementById('status');
+const modal = document.getElementById('modal');
+const details = document.getElementById('details');
+
+[...new Set(minerals.map(m=>m.Category))].sort().forEach(c => {
+  const o=document.createElement('option'); o.value=c; o.textContent=c; category.appendChild(o);
+});
+
+function render() {
+  const q=search.value.trim().toLowerCase();
+  const cat=category.value;
+  const filtered=minerals.filter(m => {
+    const hay=Object.values(m).join(' ').toLowerCase();
+    return (!q || hay.includes(q)) && (!cat || m.Category===cat);
+  });
+  status.textContent=`${filtered.length} risultati`;
+  results.innerHTML='';
+  if(!filtered.length) {
+    results.innerHTML='<div class="empty">Nessun minerale trovato. Prova con un altro termine.</div>';
+    return;
+  }
+  filtered.forEach((m,i)=>{
+    const card=document.createElement('article'); card.className='result';
+    card.innerHTML=`<h3>${esc(m["English name"])}</h3>
+      <div class="it">${esc(m["Italian name"])}</div>
+      <span class="badge">${esc(m["Category"])}</span>`;
+    card.onclick=()=>openMineral(m);
+    results.appendChild(card);
+  });
+}
+
+function openMineral(m) {
+  document.getElementById('modalTitle').textContent=m["Italian name"];
+  document.getElementById('modalSubtitle').textContent=m["English name"];
+  details.innerHTML='';
+  const order=["Category","Formula","Crystal system","Mohs hardness","Specific gravity (g/cm³)",
+    "Luster","Cleavage","Fracture","Color","Streak","Transparency","Description","Diagnostic features","Notes"];
+  order.forEach(k=>{
+    const d=document.createElement('div');
+    d.className='field'+(["Description","Diagnostic features","Notes"].includes(k)?' full':'');
+    d.innerHTML=`<div class="label">${esc(labels[k])}</div><div class="value">${esc(m[k] ?? "—")}</div>`;
+    details.appendChild(d);
+  });
+  modal.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal() {
+  modal.classList.remove('open'); document.body.style.overflow='';
+}
+document.getElementById('close').onclick=closeModal;
+modal.onclick=e=>{if(e.target===modal) closeModal();};
+document.addEventListener('keydown',e=>{if(e.key==='Escape') closeModal();});
+search.addEventListener('input',render);
+category.addEventListener('change',render);
+
+function esc(v) {
+  return String(v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+render();
+</script>
+</body>
+</html>
